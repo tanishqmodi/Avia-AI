@@ -1,0 +1,6 @@
+path: C:\Users\PRATYUSH RAJ\.cache\kagglehub\datasets\swjtuziwei\fbd-sv-2024\versions\1\FBD-SV-2024
+train: images/train
+val: images/val
+nc: 1
+names:
+  0: Bird

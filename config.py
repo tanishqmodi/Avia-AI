@@ -5,13 +5,22 @@ SkyGuard — Configurable parameters for Avian Intrusion Detection.
 import numpy as np
 
 # ── Model Settings ────────────────────────────────────────────────────────────
-YOLO_MODEL_PATH = "runs/bird_detector3/weights/best.pt"
+# Use COCO-pretrained YOLOv8 as the primary model and filter to the "bird" class.
+# The bundled custom weights at runs/bird_detector3/weights/best.pt were trained
+# with nc:1 (class 0 = Bird), which means any detected foreground object gets
+# labeled "Bird" — including humans, cars, etc. Filtering COCO class 14 (bird)
+# on a multi-class model prevents that class-collapse false-positive problem.
+YOLO_MODEL_PATH = "yolov8m.pt"
 YOLO_FALLBACK = "yolov8n.pt"
 RTDETR_MODEL_PATH = "rtdetr-l.pt"  # downloaded on first use by ultralytics
 DEFAULT_MODEL_TYPE = "yolo"        # "yolo", "rtdetr", "auto"
 
+# COCO class id for "bird". Used to filter detections so non-birds (humans,
+# vehicles, etc.) are ignored.
+BIRD_CLASS_ID = 14
+
 # ── Detection Settings ────────────────────────────────────────────────────────
-CONFIDENCE_THRESHOLD = 0.25
+CONFIDENCE_THRESHOLD = 0.60
 IOU_THRESHOLD = 0.45
 
 # ── Tracker Settings (ByteTrack) ─────────────────────────────────────────────

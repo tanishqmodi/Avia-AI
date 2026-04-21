@@ -3,7 +3,7 @@
 # Usage: bash scripts/download_weights.sh
 set -euo pipefail
 
-REPO="${SKYGUARD_REPO:-tanishqmodi/Automated-Bird-Monitoring-using-YOLO-and-Tracking}"
+REPO="${SKYGUARD_REPO:-tanishqmodi/Avia-AI}"
 TAG="${SKYGUARD_WEIGHTS_TAG:-v1.0}"
 BASE="https://github.com/${REPO}/releases/download/${TAG}"
 
@@ -22,7 +22,7 @@ download() {
     mv "$dest.part" "$dest"
 }
 
-echo "Downloading SkyGuard model weights from ${REPO}@${TAG}"
+echo "Downloading Avia AI model weights from ${REPO}@${TAG}"
 download "${BASE}/rtdetr-l.pt"                                 "rtdetr-l.pt"
 download "${BASE}/yolov8m.pt"                                  "yolov8m.pt"
 download "${BASE}/bird_detector3-best.pt"                      "runs/bird_detector3/weights/best.pt"

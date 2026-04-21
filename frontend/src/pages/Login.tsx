@@ -54,7 +54,7 @@ export default function Login() {
     setError(null);
     try {
       const mockGoogleId = 'google_user_' + Math.floor(Math.random() * 10000);
-      const data = await api.googleAuth('pilot@skyguard.com', 'Test Pilot', mockGoogleId);
+      const data = await api.googleAuth('pilot@aviaai.com', 'Test Pilot', mockGoogleId);
       setAuth(data.access_token, data.user);
       navigate(redirectTo, { replace: true });
     } catch (err: any) {

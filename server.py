@@ -1,5 +1,5 @@
 """
-SkyGuard Backend — Zone-aware, multi-model avian intrusion detection server.
+Avia AI Backend — Zone-aware, multi-model avian intrusion detection server.
 
 Key fixes over v1:
   - Runway zone polygon ONLY drawn on is_runway cameras
@@ -836,7 +836,7 @@ def _ensure_username_request_table():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("SkyGuard backend starting...")
+    logger.info("Avia AI backend starting...")
     _migrate_user_airport_columns()
     _ensure_username_request_table()
     airports_router.start_background_load()
@@ -845,7 +845,7 @@ async def lifespan(app: FastAPI):
     logger.info("Shutting down...")
     manager.shutdown()
 
-app = FastAPI(title="SkyGuard API", version="3.0", lifespan=lifespan)
+app = FastAPI(title="Avia AI API", version="3.0", lifespan=lifespan)
 app.include_router(auth.router)
 # AdminDash:
 app.include_router(admin_router.router)
@@ -940,7 +940,7 @@ async def get_logs(limit: int = Query(default=200)):
 async def download_logs():
     return StreamingResponse(
         io.BytesIO(manager.get_logs_csv().encode()), media_type="text/csv",
-        headers={"Content-Disposition": f"attachment; filename=skyguard_{datetime.now():%Y%m%d_%H%M%S}.csv"})
+        headers={"Content-Disposition": f"attachment; filename=aviaai_{datetime.now():%Y%m%d_%H%M%S}.csv"})
 
 @app.get("/api/config")
 async def get_config():

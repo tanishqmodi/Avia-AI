@@ -1,5 +1,5 @@
 """
-SkyGuard — Configurable parameters for Avian Intrusion Detection.
+Avia AI — Configurable parameters for Avian Intrusion Detection.
 """
 
 import numpy as np

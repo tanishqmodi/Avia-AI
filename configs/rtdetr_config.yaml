@@ -1,0 +1,7 @@
+path: /Users/tanishqmodi/Desktop/avian_detection/data/augmented
+train: train/images
+val: val/images
+test: test/images
+nc: 1
+names:
+  0: bird

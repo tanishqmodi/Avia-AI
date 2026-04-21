@@ -1,0 +1,48 @@
+# Environments
+.conda-mps/
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+
+# OS
+.DS_Store
+
+# Logs
+*.log
+alerts.log
+logs/
+
+# Node (legacy streamlit dashboard + current React frontend)
+dashboard/node_modules/
+dashboard/dist/
+frontend/node_modules/
+frontend/dist/
+
+# IDE
+.vscode/
+.idea/
+
+# Misc
+*.egg-info/
+.ipynb_checkpoints/
+
+# Local database (SQLite fallback — contains user data)
+skyguard.db
+
+# Model weights — shipped via GitHub Releases, not the repo
+*.pt
+!configs/*.pt
+runs/**/weights/
+runs/**/*.pt
+
+# Training run artifacts too heavy for git
+runs/detect/
+runs/testingnewdataset_drone/
+runs/yolov8s_bird_detection/
+runs/avian_detection_training_live/
+runs/avian_detection_training_live2/
+runs/avian_detection_training_mps_live/
+runs/rtdetr_bird_detection2/
+runs/rtdetr_bird_detection2_resume.pid

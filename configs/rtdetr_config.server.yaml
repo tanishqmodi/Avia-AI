@@ -1,0 +1,10 @@
+# RT-DETR dataset config for the college server.
+# Update `path` to wherever you place the dataset on the server.
+# The `train`/`val`/`test` paths are resolved relative to `path`.
+path: /home/bhimani.kishankumar/datasets/avian_detection/augmented
+train: train/images
+val: val/images
+test: test/images
+nc: 1
+names:
+  0: bird

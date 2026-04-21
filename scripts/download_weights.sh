@@ -22,7 +22,7 @@ download() {
     mv "$dest.part" "$dest"
 }
 
-echo "Downloading SkyGuard model weights from ${REPO}@${TAG}"
+echo "Downloading Avia AI model weights from ${REPO}@${TAG}"
 download "${BASE}/rtdetr-l.pt"                                 "rtdetr-l.pt"
 download "${BASE}/yolov8m.pt"                                  "yolov8m.pt"
 download "${BASE}/bird_detector3-best.pt"                      "runs/bird_detector3/weights/best.pt"

@@ -1,6 +1,6 @@
-# SkyGuard — Automated Bird Monitoring using YOLO and Tracking
+# Avia AI — Intelligent Aviation Systems
 
-Bird strikes are one of the biggest safety hazards in aviation. SkyGuard is a real-time
+Bird strikes are one of the biggest safety hazards in aviation. Avia AI is a real-time
 bird-detection and monitoring system designed to run at airports. It combines modern
 object detectors (YOLOv8 and RT-DETR), per-object tracking (ByteTrack), a custom
 event-response engine (RTDTER) that reasons about airport zones, and a full web
@@ -9,7 +9,7 @@ dashboard with authentication, user management and upload-based offline analysis
 ---
 
 ## Table of contents
-1. [What SkyGuard does](#what-skyguard-does)
+1. [What Avia AI does](#what-avia-ai-does)
 2. [Architecture](#architecture)
 3. [The alert engine (RTDTER)](#the-alert-engine-rtdter)
 4. [Zone system](#zone-system)
@@ -28,7 +28,7 @@ dashboard with authentication, user management and upload-based offline analysis
 
 ---
 
-## What SkyGuard does
+## What Avia AI does
 
 - **Real-time detection** with a choice of models: YOLOv8 (fast) or RT-DETR (transformer,
   more accurate). Each camera can use a different model, or `auto` for an ensemble.
@@ -489,5 +489,5 @@ Tables are created automatically on startup via SQLAlchemy `create_all`.
 
 ---
 
-Built by Tanishq Modi as part of an avian-intrusion-detection capstone. PRs and
-issues welcome.
+Built by Tanishq Modi as part of an avian-intrusion-detection capstone under the
+Avia AI — Intelligent Aviation Systems banner. PRs and issues welcome.

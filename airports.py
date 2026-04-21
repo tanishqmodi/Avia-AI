@@ -142,7 +142,7 @@ def _download() -> Optional[list[dict]]:
     try:
         DATA_DIR.mkdir(exist_ok=True)
         logger.info("Fetching airports dataset from %s", AIRPORTS_URL)
-        req = urllib.request.Request(AIRPORTS_URL, headers={"User-Agent": "SkyGuard/3.0"})
+        req = urllib.request.Request(AIRPORTS_URL, headers={"User-Agent": "AviaAI/3.0"})
         with urllib.request.urlopen(req, timeout=15) as r:
             text = r.read().decode("utf-8")
         DATA_FILE.write_text(text, encoding="utf-8")

@@ -3,7 +3,7 @@
 # Usage: bash scripts/download_weights.sh
 set -euo pipefail
 
-REPO="${SKYGUARD_REPO:-tanishqmodi/Automated-Bird-Monitoring-using-YOLO-and-Tracking}"
+REPO="${SKYGUARD_REPO:-tanishqmodi/Avia-AI}"
 TAG="${SKYGUARD_WEIGHTS_TAG:-v1.0}"
 BASE="https://github.com/${REPO}/releases/download/${TAG}"
 

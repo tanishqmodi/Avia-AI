@@ -126,7 +126,7 @@ polygon / approach logic.
 ## Project layout
 
 ```
-Automated-Bird-Monitoring-using-YOLO-and-Tracking/
+Avia-AI/
 ├── server.py                 # FastAPI app: cameras, uploads, WebSocket, settings
 ├── rtdter.py                 # RTDTER engine (tracking + alert logic)
 ├── auth.py                   # Login, signup, Google, JWT, self-profile, username-requests
@@ -170,8 +170,8 @@ Automated-Bird-Monitoring-using-YOLO-and-Tracking/
 Clone the repo and install both halves:
 
 ```bash
-git clone https://github.com/tanishqmodi/Automated-Bird-Monitoring-using-YOLO-and-Tracking.git
-cd Automated-Bird-Monitoring-using-YOLO-and-Tracking
+git clone https://github.com/tanishqmodi/Avia-AI.git
+cd Avia-AI
 
 # Backend
 python3 -m venv .venv && source .venv/bin/activate
@@ -211,7 +211,7 @@ That fetches:
 
 Override the release tag with `SKYGUARD_WEIGHTS_TAG=<tag>` if you need a
 specific version. Each file also appears on
-[the releases page](https://github.com/tanishqmodi/Automated-Bird-Monitoring-using-YOLO-and-Tracking/releases)
+[the releases page](https://github.com/tanishqmodi/Avia-AI/releases)
 if you'd rather download by hand.
 
 ### Configure your JWT secret

@@ -1,437 +1,58 @@
-% =============================================================================
-% Avia AI: A Zone-Aware, Multi-Model Framework for Real-Time
-% Avian Intrusion Detection at Airports
-%
-% IEEE Conference Template (IEEEtran)
-% Compile with: pdflatex main.tex && bibtex main && pdflatex main.tex && pdflatex main.tex
-% =============================================================================
 \documentclass[conference]{IEEEtran}
 \IEEEoverridecommandlockouts
-
 \usepackage{cite}
 \usepackage{amsmath,amssymb,amsfonts}
 \usepackage{algorithmic}
 \usepackage{graphicx}
 \usepackage{textcomp}
 \usepackage{xcolor}
-\usepackage{booktabs}
-\usepackage{url}
-\usepackage{hyperref}
-\hypersetup{
-    colorlinks=true,
-    linkcolor=black,
-    citecolor=black,
-    urlcolor=blue
-}
-
 \def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
     T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
 
 \begin{document}
 
-\title{Avia AI: A Zone-Aware, Multi-Model Framework for \\
-       Real-Time Avian Intrusion Detection at Airports}
+\title{Title}
 
-\author{%
-\IEEEauthorblockN{Tanishq Modi}
-\IEEEauthorblockA{\textit{School of Computer Science} \\
-\textit{UPES}\\
-Dehradun, India \\
-itanishqmodi@gmail.com}
-\and
-\IEEEauthorblockN{Co-Author}
-\IEEEauthorblockA{\textit{Department} \\
-\textit{Institution}\\
+\author{
+\IEEEauthorblockN{First Author}
+\IEEEauthorblockA{\textit{dept. name of organization} \\
+\textit{name of organization}\\
 City, Country \\
-email@institution.edu}
+email@address.com}
+\and
+\IEEEauthorblockN{Second Author}
+\IEEEauthorblockA{\textit{dept. name of organization} \\
+\textit{name of organization}\\
+City, Country \\
+email@address.com}
 }
 
 \maketitle
 
-% -----------------------------------------------------------------------------
 \begin{abstract}
-Bird strikes remain one of the most persistent and costly safety hazards in
-civil aviation, causing an estimated 1.2~billion USD in damage worldwide each
-year. Existing airport bird-management programs rely primarily on human
-observation and reactive countermeasures, limiting both detection latency
-and coverage. We present \emph{Avia AI}, a real-time, zone-aware avian
-intrusion detection framework that couples modern object detectors
-(YOLOv8 and RT-DETR) with ByteTrack-based multi-object tracking and a
-custom event-response engine we call RTDTER (Real-Time Detection, Tracking,
-and Event Response). RTDTER reasons about airport topology---runway,
-taxiway, apron, perimeter, terminal, and general-purpose zones---to
-classify the operational severity of each detection. Runway cameras
-additionally employ polygon-based intrusion tests, velocity-vector
-approach analysis, and persistence timers. The system is packaged as a
-full-stack web application with per-camera model selection, administrator
-user management, and an image/video offline-analysis pipeline. On the
-FBD-SV-2024 dataset we report a mAP@0.5 of $0.XX$ for our fine-tuned
-YOLOv8 model and $0.XX$ for RT-DETR, while sustaining $\approx20$\,FPS
-inference on a single commodity GPU. The framework is released as open
-source to enable reproducibility and community extension.
+Abstract goes here.
 \end{abstract}
 
 \begin{IEEEkeywords}
-bird strike, avian intrusion, object detection, YOLO, RT-DETR, multi-object
-tracking, ByteTrack, airport safety, real-time systems, edge AI.
+keyword1, keyword2, keyword3
 \end{IEEEkeywords}
 
-% -----------------------------------------------------------------------------
 \section{Introduction}
-Bird strikes---collisions between aircraft and wildlife---pose a well
-documented threat to aviation safety. The U.S. Federal Aviation
-Administration (FAA) reports more than 17{,}000 wildlife strikes
-annually, with the International Civil Aviation Organization (ICAO)
-estimating \$1.2 billion in global damage each year~\cite{faa_wildlife,
-icao_wildlife}. The 2009 ``Miracle on the Hudson'' incident, in which US
-Airways Flight 1549 ditched into the Hudson River following a flock
-strike, remains a prominent reminder that even large jet aircraft are
-vulnerable during the takeoff and climb phases~\cite{hudson}.
 
-Conventional airport bird-management programs depend on a combination of
-visual observation, pyrotechnic dispersal, and habitat modification.
-While effective, these techniques share two structural
-limitations:~(i)~human observers have limited field of view and attention
-span; and~(ii)~existing sensor solutions (radar, acoustic) rarely reason
-about airport topology, treating the runway and a distant terminal
-rooftop as equally salient. Machine-learning-based computer-vision
-detectors have seen rapid progress since the introduction of single-shot
-architectures such as YOLO~\cite{yolov1, yolov8}, and more recently
-transformer-based detectors such as DETR~\cite{detr} and RT-DETR
-~\cite{rtdetr}. However, most prior applications of these models to
-airport environments focus exclusively on detection quality, not
-operational interpretation.
+\section{Related Work}
 
-In this paper we present \emph{Avia AI}, an end-to-end framework that
-bridges detection and operational response. Our contributions are:
+\section{Methodology}
 
-\begin{itemize}
-  \item \textbf{A zone-aware event-response engine (RTDTER)} that converts
-  raw detections and ByteTrack~\cite{bytetrack} identities into four
-  operationally distinct alert classes: \emph{intrusion},
-  \emph{high-risk persistence}, \emph{approach}, and \emph{density}.
-  \item \textbf{A multi-model detection pipeline} that supports per-camera
-  selection between YOLOv8 (fast) and RT-DETR (accurate), plus an
-  automatic ensemble mode.
-  \item \textbf{A polygon-based runway zone abstraction} with
-  velocity-vector approach analysis and persistence timers, parameterised
-  per camera.
-  \item \textbf{An open-source full-stack implementation}
-  (FastAPI~+~React) supporting multi-camera live streaming, offline
-  upload analysis, role-based access control, and per-user history.
-\end{itemize}
+\section{Experiments}
 
-The remainder of this paper is structured as follows.
-Section~\ref{sec:related} reviews related work in airport wildlife
-surveillance and modern object detection.
-Section~\ref{sec:arch} describes the system architecture.
-Section~\ref{sec:detection} covers the detection pipeline and
-Section~\ref{sec:tracking} the tracking stage.
-Section~\ref{sec:rtdter} details the RTDTER alert engine and
-Section~\ref{sec:zones} the zone system.
-Section~\ref{sec:experiments} presents experimental results, and
-Section~\ref{sec:discussion} discusses limitations and future work.
+\section{Results}
 
-% -----------------------------------------------------------------------------
-\section{Related Work}\label{sec:related}
+\section{Discussion}
 
-\subsection{Airport Wildlife Surveillance}
-Traditional airport wildlife programs combine human patrols with avian
-radar and acoustic deterrents~\cite{avian_radar}. Commercial avian radar
-systems (e.g., DeTect MERLIN) offer continuous perimeter coverage but
-are expensive to deploy and tend to produce coarse positional
-estimates. Vision-based approaches have been comparatively rare in
-industrial deployments, though academic work on bird detection from
-fixed cameras dates back at least to Yoshihashi et al.~\cite{bird_cnn},
-who applied early CNNs to wind-turbine bird monitoring.
+\section{Conclusion}
 
-\subsection{Modern Object Detection}
-YOLO~\cite{yolov1} established single-shot detection as the dominant
-real-time paradigm, with successive versions
-(v3~\cite{yolov3}, v5, v8~\cite{yolov8}) improving accuracy while
-retaining inference speed suitable for live video. DETR~\cite{detr}
-introduced a transformer-based set-prediction formulation that removed
-the need for handcrafted anchors or non-maximum suppression, and
-RT-DETR~\cite{rtdetr} closed the real-time gap, reporting competitive
-accuracy with YOLOv8 at comparable frame-rates on GPU.
-
-\subsection{Multi-Object Tracking}
-Tracking-by-detection frameworks such as SORT~\cite{sort} and
-DeepSORT~\cite{deepsort} associate per-frame detections via a Kalman
-filter and Hungarian matching. ByteTrack~\cite{bytetrack} improved
-recall on low-confidence detections by re-introducing them into the
-association step, making it particularly well-suited to small, fast
-objects such as birds.
-
-\subsection{Zone Reasoning in Surveillance}
-Region-of-interest reasoning in traffic and security surveillance is
-well established~\cite{roi_survey}, but has received little attention
-in the airport wildlife context. To our knowledge, Avia AI is the first
-open-source system to couple a runway polygon, velocity-vector approach
-analysis, and persistence timers into a single operationally typed alert
-pipeline.
-
-% -----------------------------------------------------------------------------
-\section{System Architecture}\label{sec:arch}
-
-\begin{figure}[!t]
-\centering
-\includegraphics[width=\columnwidth]{figures/architecture_placeholder.pdf}
-\caption{Avia AI system architecture. Camera streams and user uploads
-flow through the detector~\textrightarrow~tracker~\textrightarrow~RTDTER
-pipeline; alerts and annotated frames are pushed to the dashboard over
-WebSockets, while administrative state is persisted in SQL.}
-\label{fig:arch}
-\end{figure}
-
-Avia AI is built on a FastAPI backend, a React-based dashboard, and a
-SQL persistence layer (PostgreSQL with automatic SQLite fallback).
-Figure~\ref{fig:arch} shows the overall data flow.
-
-Three sources feed the pipeline:
-(i)~live RTSP or webcam streams registered through the dashboard,
-(ii)~uploaded images, and
-(iii)~uploaded video files. Each frame passes through a
-\texttt{ModelManager}, which selects either YOLOv8, RT-DETR, or an
-ensemble of both based on per-camera configuration. Detections are
-filtered to COCO class~14 (\emph{bird}) for COCO-pretrained models and
-passed to the ByteTrack tracker, producing per-frame tuples of
-$(\text{track\_id}, \text{bbox}, \text{confidence})$. RTDTER consumes
-these tuples, maintains per-track persistence and velocity state, and
-produces typed alerts which are simultaneously (a)~logged to the
-database, (b)~overlaid on the annotated frame, and (c)~broadcast over a
-\texttt{/ws/alerts} WebSocket channel.
-
-The dashboard authenticates users via JWT, with two roles
-(\emph{admin}~/~\emph{user}) and a bearer-token header on every request.
-Administrators manage camera configuration, user accounts, and airport
-assignments. Ordinary users can request username changes that require
-administrator approval---a workflow common in managed aviation IT
-environments.
-
-% -----------------------------------------------------------------------------
-\section{Detection Pipeline}\label{sec:detection}
-
-\subsection{Model selection}
-Avia AI treats the choice of detector as a per-camera configuration
-parameter. For operational cameras where latency dominates (runway
-edge, perimeter) we default to YOLOv8m. For upload-based forensic
-analysis, where latency budgets are relaxed, we default to RT-DETR.
-When the \emph{auto} mode is configured, both models run in parallel
-and their detections are fused by weighted non-maximum suppression,
-with weights biased toward the higher-recall RT-DETR outputs.
-
-\subsection{Single-class specialisation}
-For the upload analysis path we additionally train a single-class
-(\texttt{nc=1}) YOLOv8s specialist on the FBD-SV-2024
-dataset~\cite{fbdsv2024}. The specialist's weights are selected over
-COCO-pretrained candidates because uploaded media rarely contains
-non-bird COCO classes, and the specialist achieves higher recall on
-small-object imagery (image-path inference uses \texttt{imgsz=1600}).
-
-\subsection{Confidence calibration}
-Live streams are inferred at \texttt{imgsz=640} with confidence floor
-$\tau=0.25$; upload images at $\tau=0.15$. The lower upload threshold
-reflects the batch-style usage: the cost of a false positive is a
-reviewer's attention, not an operator's response. These parameters are
-surfaced in a Settings page and persisted to the \texttt{system\_settings}
-table for live reconfiguration.
-
-% -----------------------------------------------------------------------------
-\section{Tracking}\label{sec:tracking}
-
-We use ByteTrack~\cite{bytetrack} via the \texttt{ultralytics} tracker
-interface. Birds---particularly in climb or descent---are small, fast,
-and frequently occluded by background structure. ByteTrack's policy of
-associating low-confidence detections in a second matching pass is
-well-suited to this regime: it reduces identity switches when a bird
-briefly passes behind a structure or out of frame.
-
-The tracker is configured with a buffer of 30 frames
-(\texttt{TRACK\_BUFFER}); tracks that are unmatched for longer than this
-window are retired. The matching IoU threshold is 0.8 with a lower
-0.5 threshold in the second-pass.
-
-% -----------------------------------------------------------------------------
-\section{RTDTER Alert Engine}\label{sec:rtdter}
-
-RTDTER maintains a dictionary $\mathcal{T}$ indexed by
-\texttt{track\_id}, each entry holding the current bounding box, a
-short history of centroid positions, a first-entry timestamp for zone
-membership, and a cumulative dwell time. On each frame the engine
-evaluates four predicates:
-
-\paragraph{Intrusion}
-A track $t$ is an \emph{intrusion} on frame $k$ if the centroid of its
-bounding box lies inside the runway polygon $\mathcal{P}$ at frame $k$
-but did not lie inside $\mathcal{P}$ at frame $k-1$. This is emitted
-once per track.
-
-\paragraph{High-Risk Persistence}
-$t$ triggers \emph{high-risk} if its cumulative dwell inside
-$\mathcal{P}$ exceeds the threshold
-$\theta_p$ (default 3\,s). A single track may emit at most one
-high-risk alert per episode.
-
-\paragraph{Approach}
-Outside $\mathcal{P}$, we compute the centroid velocity vector
-$\vec{v}_t$ over the last $w=5$ frames and the displacement vector
-$\vec{d}_t$ from the current centroid to the centroid of $\mathcal{P}$.
-An approach is emitted when
-$\angle(\vec{v}_t, \vec{d}_t) \leq \alpha$ (default 30\textdegree) and
-$\|\vec{v}_t\| \geq v_{\min}$, guarding against stationary tracks.
-
-\paragraph{Density}
-When $|\mathcal{T}_{\text{active}}| \geq \theta_d$ (default 5), a
-density alert is emitted. Runway cameras produce a ``Critical'' label;
-non-runway cameras produce a ``High Density'' label.
-
-Each alert is tagged with the camera's zone priority (see
-Section~\ref{sec:zones}) and the detector that produced the underlying
-detection, enabling downstream analytics such as per-model false-positive
-rate estimation.
-
-\begin{table}[!t]
-\caption{Default RTDTER thresholds.}
-\label{tab:thresholds}
-\centering
-\begin{tabular}{lll}
-\toprule
-\textbf{Symbol} & \textbf{Parameter} & \textbf{Default} \\
-\midrule
-$\tau$       & Detection confidence      & 0.25 (live), 0.15 (upload) \\
-$\theta_p$   & Persistence window        & 3.0\,s \\
-$\alpha$     & Approach angle tolerance  & 30\textdegree \\
-$v_{\min}$   & Minimum approach velocity & 50\,px/s \\
-$\theta_d$   & Density threshold         & 5 concurrent tracks \\
-$w$          & Velocity smoothing window & 5 frames \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-% -----------------------------------------------------------------------------
-\section{Zone System}\label{sec:zones}
-
-Not every camera requires runway-grade logic. A camera monitoring
-terminal parking does not benefit from polygon intrusion tests; a
-runway-edge camera absolutely does. We therefore parameterise each
-camera by its \emph{zone}---one of \{Runway, Taxiway, Apron, Perimeter,
-Terminal, General\}---which in turn determines
-(i)~the alert priority (1--4),
-(ii)~the displayed label (e.g.\ ``RUNWAY ALERT''), and
-(iii)~whether polygon / approach logic is active.
-Only cameras with \texttt{is\_runway=True} run the full RTDTER pipeline;
-other cameras still execute detection, tracking, and the density
-predicate, but skip the polygon and approach stages.
-
-% -----------------------------------------------------------------------------
-\section{Experimental Setup and Results}\label{sec:experiments}
-
-\subsection{Dataset}
-We train and evaluate on FBD-SV-2024~\cite{fbdsv2024}, a recent
-bird-from-video dataset containing 8{,}750 training and 375 validation
-frames extracted from fixed cameras, annotated in Pascal VOC format.
-For our single-class bird specialist we convert the annotations to the
-YOLO format using a custom pipeline that preserves normalised bounding
-boxes (cf.\ \texttt{train.py}).
-
-\subsection{Training configuration}
-RT-DETR-L is fine-tuned for 80 epochs with a batch size of 16 at
-\texttt{imgsz=640} on an NVIDIA GPU (or Apple MPS for development),
-using AdamW with initial learning rate $10^{-4}$, cosine decay, and an
-early-stopping patience of 20. YOLOv8s for single-class bird detection
-is fine-tuned with the Ultralytics default recipe.
-
-\subsection{Metrics}
-We report standard detection metrics: mAP at IoU 0.5, mAP averaged
-across IoU 0.5:0.95, precision, and recall. Table~\ref{tab:detection}
-reports results on the FBD-SV-2024 validation split. Alert-level
-results for RTDTER are measured against a manually labelled held-out
-subset of 200 runway clips. Metrics marked with `--' are left as
-placeholders pending final runs.
-
-\begin{table}[!t]
-\caption{Detection results on FBD-SV-2024 (val split).}
-\label{tab:detection}
-\centering
-\begin{tabular}{lcccc}
-\toprule
-\textbf{Model} & \textbf{mAP@0.5} & \textbf{mAP@0.5:0.95} & \textbf{P} & \textbf{R} \\
-\midrule
-YOLOv8m (COCO)        & --  & --  & --  & --  \\
-YOLOv8s (specialist)  & --  & --  & --  & --  \\
-RT-DETR-L             & --  & --  & --  & --  \\
-Ensemble (auto)       & --  & --  & --  & --  \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\subsection{Inference throughput}
-Table~\ref{tab:throughput} reports frames-per-second on a single
-NVIDIA GPU at \texttt{imgsz=640}. Batch-1 upload inference at
-\texttt{imgsz=1600} is included for reference.
-
-\begin{table}[!t]
-\caption{Inference throughput (single GPU, batch 1).}
-\label{tab:throughput}
-\centering
-\begin{tabular}{lcc}
-\toprule
-\textbf{Model} & \textbf{\texttt{imgsz=640}} & \textbf{\texttt{imgsz=1600}} \\
-\midrule
-YOLOv8m     & -- & -- \\
-RT-DETR-L   & -- & -- \\
-Ensemble    & -- & -- \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-% -----------------------------------------------------------------------------
-\section{Discussion}\label{sec:discussion}
-
-\subsection{False-positive profile}
-A class-collapse failure mode deserves note: when a single-class
-(\texttt{nc=1}) specialist is fed imagery containing non-bird
-foreground objects (humans, vehicles), it labels those objects as
-``bird'' with high confidence. We mitigate this on the live path by
-running the multi-class YOLOv8 and filtering to COCO class 14,
-reserving the specialist for the upload path where non-bird foregrounds
-are rare.
-
-\subsection{Zone generalisation}
-The current zone system treats the runway polygon as a fixed
-homography of the frame. A natural extension is to calibrate each
-camera against ground-plane coordinates so that zones can be expressed
-in real-world geometry. This would in turn enable quantitative
-approach-speed estimates rather than pixel-space velocity.
-
-\subsection{Dataset bias}
-FBD-SV-2024 is drawn from a limited number of fixed cameras under
-day-time conditions. A production deployment will need augmentation
-with dawn/dusk footage and synthetic rain/snow passes to bound
-degradation in adverse conditions.
-
-% -----------------------------------------------------------------------------
-\section{Conclusion}\label{sec:conclusion}
-
-We introduced Avia AI, an open-source framework for real-time avian
-intrusion detection that couples modern object detection, ByteTrack
-multi-object tracking, and a zone-aware event-response engine (RTDTER)
-into a deployable full-stack application. The system's per-camera
-model selection, polygon-based runway reasoning, and structured alert
-types bridge the gap between ``bird-in-frame'' detection and actionable
-airport operations. The implementation is released under the MIT
-license and the trained model weights are distributed via GitHub
-Releases. We hope this encourages further reproducible work on
-operational aviation safety.
-
-% -----------------------------------------------------------------------------
-\section*{Acknowledgments}
-The authors thank the maintainers of the Ultralytics library and the
-creators of the FBD-SV-2024 dataset for their open-source contributions.
-
-% -----------------------------------------------------------------------------
-\bibliographystyle{IEEEtran}
-\bibliography{references}
+\begin{thebibliography}{00}
+\bibitem{b1} Author, ``Title,'' \emph{Journal}, vol.~x, no.~x, pp.~xx--xx, Year.
+\end{thebibliography}
 
 \end{document}

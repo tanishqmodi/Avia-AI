@@ -30,15 +30,16 @@ from typing import Optional
 
 import cv2
 import numpy as np
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query, UploadFile, File, Depends
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query, UploadFile, File, Depends, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse, JSONResponse
+from fastapi.responses import StreamingResponse, JSONResponse, FileResponse
+from sqlalchemy.orm import Session
 from ultralytics import YOLO
 
 import config as cfg
 from rtdter import RTDTEREngine
 import models as db_models
-from database import SessionLocal, engine
+from database import SessionLocal, engine, get_db
 import auth
 # AdminDash: additional routers
 import admin as admin_router
@@ -834,11 +835,25 @@ def _ensure_username_request_table():
         logger.warning("UsernameRequest table create skipped: %s", e)
 
 
+# TestHistory: ensure the per-user upload history table + media dir exist.
+UPLOAD_HISTORY_DIR = Path(os.environ.get("UPLOAD_HISTORY_DIR", "upload_history"))
+MAX_HISTORY_PER_USER = 20
+
+def _ensure_upload_history():
+    try:
+        db_models.UploadHistory.__table__.create(bind=engine, checkfirst=True)
+        UPLOAD_HISTORY_DIR.mkdir(parents=True, exist_ok=True)
+    except Exception as e:
+        logger.warning("UploadHistory init skipped: %s", e)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Avia AI backend starting...")
     _migrate_user_airport_columns()
     _ensure_username_request_table()
+    _ensure_upload_history()
+    _backfill_history_thumbnails()
     airports_router.start_background_load()
     manager.load_from_db()
     yield
@@ -1389,6 +1404,230 @@ async def upload_video(file: UploadFile = File(...),
     # TestingNewDataset: offload to a thread so event-loop-sensitive endpoints
     # (legend, stats, alerts WS) stay responsive during multi-minute inference.
     return await asyncio.to_thread(_process_video_sync, contents, conf, iou, model_type)
+
+
+# ── TestHistory: per-user upload history ─────────────────────────────────────
+
+def _make_history_thumbnail(media_path: Path, kind: str,
+                            max_dim: int = 480, quality: int = 72) -> Optional[str]:
+    """Read the saved annotated media and return a small JPEG dataURL.
+
+    Server-side thumbnailing is more reliable than the browser's <video>
+    element, which can fail to decode a frame within the upload timeout for
+    larger or unusual codecs.
+    """
+    try:
+        if kind == "image":
+            frame = cv2.imread(str(media_path))
+        elif kind == "video":
+            cap = cv2.VideoCapture(str(media_path))
+            ok, frame = cap.read()
+            cap.release()
+            if not ok:
+                frame = None
+        else:
+            return None
+        if frame is None:
+            return None
+        h, w = frame.shape[:2]
+        if w == 0 or h == 0:
+            return None
+        scale = min(1.0, max_dim / max(w, h))
+        if scale < 1.0:
+            frame = cv2.resize(frame, (int(w * scale), int(h * scale)),
+                               interpolation=cv2.INTER_AREA)
+        ok, buf = cv2.imencode(".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), quality])
+        if not ok:
+            return None
+        return "data:image/jpeg;base64," + base64.b64encode(buf.tobytes()).decode("ascii")
+    except Exception as e:
+        logger.warning("TestHistory thumbnail failed for %s: %s", media_path, e)
+        return None
+
+
+def _backfill_history_thumbnails():
+    """Generate thumbnails for any rows where the client didn't send one."""
+    try:
+        with SessionLocal() as db:
+            rows = (
+                db.query(db_models.UploadHistory)
+                .filter(db_models.UploadHistory.thumbnail_b64.is_(None))
+                .all()
+            )
+            for r in rows:
+                if not r.media_path or not Path(r.media_path).exists():
+                    continue
+                thumb = _make_history_thumbnail(Path(r.media_path), r.kind)
+                if thumb:
+                    r.thumbnail_b64 = thumb
+            if rows:
+                db.commit()
+    except Exception as e:
+        logger.warning("TestHistory backfill skipped: %s", e)
+
+
+def _serialize_history(row: db_models.UploadHistory) -> dict:
+    try:
+        meta = json.loads(row.metadata_json or "{}")
+    except Exception:
+        meta = {}
+    return {
+        "id": row.id,
+        "timestamp": int(row.created_at.timestamp() * 1000) if row.created_at else 0,
+        "kind": row.kind,
+        "filename": row.filename,
+        "fileSize": row.file_size or 0,
+        "engine": row.engine,
+        "metadata": meta,
+        "thumbnail": row.thumbnail_b64,
+    }
+
+
+@app.get("/api/uploads/history")
+def list_upload_history(
+    current_user: db_models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db),
+):
+    rows = (
+        db.query(db_models.UploadHistory)
+        .filter(db_models.UploadHistory.user_id == current_user.id)
+        .order_by(db_models.UploadHistory.created_at.desc())
+        .all()
+    )
+    return [_serialize_history(r) for r in rows]
+
+
+@app.post("/api/uploads/history")
+async def save_upload_history(
+    kind: str = Form(...),
+    filename: str = Form(...),
+    file_size: int = Form(...),
+    engine_name: str = Form(..., alias="engine"),
+    metadata: str = Form(...),
+    thumbnail: Optional[str] = Form(None),
+    media: UploadFile = File(...),
+    current_user: db_models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db),
+):
+    if kind not in ("image", "video"):
+        raise HTTPException(status_code=400, detail="kind must be 'image' or 'video'")
+
+    user_dir = UPLOAD_HISTORY_DIR / current_user.id
+    user_dir.mkdir(parents=True, exist_ok=True)
+
+    entry_id = uuid.uuid4().hex
+    ext = "mp4" if kind == "video" else "jpg"
+    media_path = user_dir / f"{entry_id}.{ext}"
+    contents = await media.read()
+    media_path.write_bytes(contents)
+    mime = "video/mp4" if kind == "video" else "image/jpeg"
+
+    # Browser-generated thumbnails (esp. for videos) often come back null when
+    # the hidden <video> element fails to decode in time. Always backfill from
+    # the saved media on the server when needed.
+    if not thumbnail:
+        thumbnail = _make_history_thumbnail(media_path, kind)
+
+    row = db_models.UploadHistory(
+        id=entry_id,
+        user_id=current_user.id,
+        kind=kind,
+        filename=filename,
+        file_size=file_size,
+        engine=engine_name,
+        metadata_json=metadata,
+        media_path=str(media_path),
+        media_mime=mime,
+        thumbnail_b64=thumbnail,
+    )
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+
+    # Cap per-user history; oldest entries fall off so disk doesn't grow forever.
+    excess = (
+        db.query(db_models.UploadHistory)
+        .filter(db_models.UploadHistory.user_id == current_user.id)
+        .order_by(db_models.UploadHistory.created_at.desc())
+        .offset(MAX_HISTORY_PER_USER)
+        .all()
+    )
+    for old in excess:
+        try:
+            Path(old.media_path).unlink(missing_ok=True)
+        except Exception:
+            pass
+        db.delete(old)
+    if excess:
+        db.commit()
+
+    return _serialize_history(row)
+
+
+@app.get("/api/uploads/history/{entry_id}/media")
+def get_upload_history_media(
+    entry_id: str,
+    current_user: db_models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db),
+):
+    row = (
+        db.query(db_models.UploadHistory)
+        .filter(
+            db_models.UploadHistory.id == entry_id,
+            db_models.UploadHistory.user_id == current_user.id,
+        )
+        .first()
+    )
+    if not row:
+        raise HTTPException(status_code=404, detail="Not found")
+    p = Path(row.media_path)
+    if not p.exists():
+        raise HTTPException(status_code=404, detail="Media file missing on server")
+    return FileResponse(p, media_type=row.media_mime, filename=row.filename)
+
+
+@app.delete("/api/uploads/history/{entry_id}")
+def delete_upload_history(
+    entry_id: str,
+    current_user: db_models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db),
+):
+    row = (
+        db.query(db_models.UploadHistory)
+        .filter(
+            db_models.UploadHistory.id == entry_id,
+            db_models.UploadHistory.user_id == current_user.id,
+        )
+        .first()
+    )
+    if row:
+        try:
+            Path(row.media_path).unlink(missing_ok=True)
+        except Exception:
+            pass
+        db.delete(row)
+        db.commit()
+    return {"ok": True}
+
+
+@app.delete("/api/uploads/history")
+def clear_upload_history(
+    current_user: db_models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db),
+):
+    rows = (
+        db.query(db_models.UploadHistory)
+        .filter(db_models.UploadHistory.user_id == current_user.id)
+        .all()
+    )
+    for r in rows:
+        try:
+            Path(r.media_path).unlink(missing_ok=True)
+        except Exception:
+            pass
+        db.delete(r)
+    db.commit()
+    return {"ok": True}
 
 
 # ── WebSocket ────────────────────────────────────────────────────────────────

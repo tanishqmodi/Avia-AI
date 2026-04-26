@@ -1,16 +1,13 @@
 // TestHistory: upload state lives here so an in-flight inference survives a
 // tab switch (the component unmounts, but the fetch promise writing into this
-// store does not). History is persisted to localStorage so past runs stick
-// across reloads — image thumbnails are downscaled before storing to stay
-// under browser quota.
+// store does not). History is persisted to the backend so the same user sees
+// the same runs across browsers and devices.
 //
-// Per-user scoping: each logged-in user's history is stored under a separate
-// localStorage key (`skyguard-upload:<userId>`) and IndexedDB blobs are keyed
-// `<userId>:<entryId>`. `setUserContext` swaps which user's state is live —
-// called from App.tsx when the auth user changes. Logged-out state stays
-// in-memory only.
+// Per-user scoping: the server filters /api/uploads/history by the bearer
+// token's user. `setUserContext(userId)` triggers a fresh load on user
+// change. Logged-out state stays in-memory only.
 import { create } from 'zustand';
-import { putBlob, getBlob, deleteBlob } from './uploadBlobStore';
+import { api } from '../services/api';
 
 export type MediaKind = 'image' | 'video';
 export type Engine = 'yolo' | 'rtdetr' | 'auto';
@@ -35,8 +32,9 @@ export interface HistoryEntry {
   fileSize: number;
   engine: Engine;
   metadata: Metadata;
-  // For images this is a downscaled JPEG dataURL (<= ~150KB). For videos null —
-  // encoded mp4 blobs are too large for localStorage.
+  // Downscaled JPEG dataURL (~150KB) returned by the server. Always present
+  // for images; usually present for videos (poster frame captured client-side
+  // before upload).
   thumbnail: string | null;
 }
 
@@ -69,62 +67,16 @@ interface UploadState {
 }
 
 const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
-const MAX_HISTORY = 20;
 const THUMB_MAX_DIM = 480;
 const THUMB_QUALITY = 0.72;
-const STORAGE_PREFIX = 'skyguard-upload';
-
-type PersistedSnapshot = { history: HistoryEntry[]; engine: Engine };
-
-function storageKey(userId: string): string {
-  return `${STORAGE_PREFIX}:${userId}`;
-}
-
-function blobKey(userId: string | null, entryId: string): string {
-  return userId ? `${userId}:${entryId}` : entryId;
-}
-
-function loadSnapshot(userId: string): PersistedSnapshot {
-  try {
-    const raw = localStorage.getItem(storageKey(userId));
-    if (!raw) return { history: [], engine: 'auto' };
-    const parsed = JSON.parse(raw) as Partial<PersistedSnapshot>;
-    return {
-      history: Array.isArray(parsed.history) ? parsed.history : [],
-      engine: (parsed.engine as Engine) || 'auto',
-    };
-  } catch {
-    return { history: [], engine: 'auto' };
-  }
-}
-
-function saveSnapshot(userId: string, snap: PersistedSnapshot) {
-  try {
-    localStorage.setItem(storageKey(userId), JSON.stringify(snap));
-  } catch (err) {
-    console.warn('TestHistory: failed to persist snapshot', err);
-  }
-}
-
-function revoke(url: string | null) {
-  if (url) {
-    try { URL.revokeObjectURL(url); } catch { /* ignore */ }
-  }
-}
-
-// Only object URLs need revoking. data: URLs are inert strings.
-function revokeIfObject(url: string | null) {
-  if (url && url.startsWith('blob:')) {
-    try { URL.revokeObjectURL(url); } catch { /* ignore */ }
-  }
-}
 
 async function dataUrlToBlob(dataUrl: string): Promise<Blob> {
   const res = await fetch(dataUrl);
   return res.blob();
 }
 
-// Downscale an annotated image dataURL so history stays under localStorage quota.
+// Downscale an annotated image dataURL so the thumbnail stays small for the
+// history list (sent inline as base64).
 async function makeImageThumbnail(dataUrl: string): Promise<string | null> {
   try {
     const img = await new Promise<HTMLImageElement>((resolve, reject) => {
@@ -186,9 +138,6 @@ async function makeVideoThumbnail(src: string): Promise<string | null> {
         settle(null);
       }
     };
-    // Hook the earliest-possible decoded-frame events. `loadeddata` /
-    // `canplay` fire once the first frame is painted; `seeked` covers the
-    // case where we nudged currentTime forward past an opening black frame.
     video.onloadeddata = drawFrame;
     video.oncanplay = drawFrame;
     video.onseeked = drawFrame;
@@ -202,12 +151,20 @@ async function makeVideoThumbnail(src: string): Promise<string | null> {
   });
 }
 
-export const useUploadStore = create<UploadState>()((set, get) => {
-  const persistIfScoped = () => {
-    const { _activeUserId, history, engine } = get();
-    if (_activeUserId) saveSnapshot(_activeUserId, { history, engine });
-  };
+function revoke(url: string | null) {
+  if (url) {
+    try { URL.revokeObjectURL(url); } catch { /* ignore */ }
+  }
+}
 
+// Only object URLs need revoking. data: URLs are inert strings.
+function revokeIfObject(url: string | null) {
+  if (url && url.startsWith('blob:')) {
+    try { URL.revokeObjectURL(url); } catch { /* ignore */ }
+  }
+}
+
+export const useUploadStore = create<UploadState>()((set, get) => {
   return {
     file: null,
     preview: null,
@@ -259,10 +216,7 @@ export const useUploadStore = create<UploadState>()((set, get) => {
       });
     },
 
-    setEngine: (e) => {
-      set({ engine: e });
-      persistIfScoped();
-    },
+    setEngine: (e) => set({ engine: e }),
     setError: (msg) => set({ error: msg }),
 
     runInference: async () => {
@@ -314,12 +268,8 @@ export const useUploadStore = create<UploadState>()((set, get) => {
           }
         }
 
-        // TestHistory: convert the annotated payload to a Blob once and
-        // reuse it for both (a) the poster frame and (b) IDB storage. The
-        // annotated mp4 is known to be browser-decodable — we play it in
-        // the Output panel — so using it for the poster is more reliable
-        // than reading the original uploaded file, whose codec the
-        // browser may not support for seek/draw.
+        // Convert annotated payload to a Blob once, used for both the local
+        // playback object URL and the upload to /api/uploads/history.
         let blob: Blob | null = null;
         if (result) {
           try {
@@ -342,47 +292,46 @@ export const useUploadStore = create<UploadState>()((set, get) => {
           }
         }
 
-        const entry: HistoryEntry = {
-          id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-          timestamp: Date.now(),
-          kind,
-          filename: file.name,
-          fileSize: file.size,
-          engine,
-          metadata: meta!,
-          thumbnail,
-        };
-
-        // Scope the blob under the active user so it can't leak across users.
-        const scopedUserId = get()._activeUserId;
+        // Swap the inline base64 result for an object URL backed by the same
+        // bytes. Lighter to render, and matches the replay-from-history path.
+        let resultForUi: string | null = result;
         if (blob) {
+          revokeIfObject(get().result);
+          resultForUi = URL.createObjectURL(blob);
+        }
+
+        // Persist to server. If this fails the user still sees the result for
+        // this session, but it won't appear in history anywhere else.
+        let savedEntry: HistoryEntry | null = null;
+        if (blob && get()._activeUserId) {
           try {
-            await putBlob(blobKey(scopedUserId, entry.id), blob);
+            const fd = new FormData();
+            fd.append('kind', kind);
+            fd.append('filename', file.name);
+            fd.append('file_size', String(file.size));
+            fd.append('engine', engine);
+            fd.append('metadata', JSON.stringify(meta));
+            if (thumbnail) fd.append('thumbnail', thumbnail);
+            const ext = kind === 'video' ? 'mp4' : 'jpg';
+            const mime = kind === 'video' ? 'video/mp4' : 'image/jpeg';
+            fd.append('media', new File([blob], `annotated.${ext}`, { type: mime }));
+            savedEntry = await api.saveUploadHistory(fd) as HistoryEntry;
           } catch (err) {
-            console.warn('TestHistory: failed to persist annotated blob', err);
+            console.warn('TestHistory: failed to save run to server', err);
           }
         }
 
-        // Trim IDB blobs for entries that will be evicted from the capped
-        // history so we don't leak storage.
         const prevHistory = get().history;
-        const trimmed = [entry, ...prevHistory].slice(0, MAX_HISTORY);
-        const dropped = prevHistory.filter(h => !trimmed.find(t => t.id === h.id));
-        for (const d of dropped) {
-          deleteBlob(blobKey(scopedUserId, d.id)).catch(() => { /* ignore */ });
-        }
+        const nextHistory = savedEntry ? [savedEntry, ...prevHistory] : prevHistory;
 
-        const prevResult = get().result;
-        revokeIfObject(prevResult);
         set({
-          result,
+          result: resultForUi,
           resultKind: kind,
           metadata: meta,
           isProcessing: false,
-          history: trimmed,
+          history: nextHistory,
           lastUpdate: Date.now(),
         });
-        persistIfScoped();
       } catch (e: any) {
         set({
           error: e?.message || 'Inference failed. Check that the server is reachable.',
@@ -392,20 +341,19 @@ export const useUploadStore = create<UploadState>()((set, get) => {
     },
 
     deleteHistoryEntry: (id) => {
-      const userId = get()._activeUserId;
-      deleteBlob(blobKey(userId, id)).catch(() => { /* ignore */ });
+      // Optimistic UI; if the server call fails the next list refresh will
+      // resync.
       set(state => ({ history: state.history.filter(h => h.id !== id) }));
-      persistIfScoped();
+      api.deleteUploadHistory(id).catch(err => {
+        console.warn('TestHistory: server delete failed', err);
+      });
     },
 
     clearHistory: () => {
-      const { history, _activeUserId } = get();
-      // Only clear this user's blobs — other users' history must stay intact.
-      for (const h of history) {
-        deleteBlob(blobKey(_activeUserId, h.id)).catch(() => { /* ignore */ });
-      }
       set({ history: [] });
-      persistIfScoped();
+      api.clearUploadHistory().catch(err => {
+        console.warn('TestHistory: server clear failed', err);
+      });
     },
 
     replayFromHistory: async (id) => {
@@ -416,8 +364,6 @@ export const useUploadStore = create<UploadState>()((set, get) => {
       revoke(current.preview);
       revokeIfObject(current.result);
 
-      // Show the analyzing overlay briefly while IDB reads the blob — for a
-      // big annotated mp4 this can take a moment.
       set({
         file: null,
         preview: null,
@@ -431,19 +377,14 @@ export const useUploadStore = create<UploadState>()((set, get) => {
 
       let objUrl: string | null = null;
       try {
-        const userId = get()._activeUserId;
-        let blob = await getBlob(blobKey(userId, entry.id));
-        // Backwards compat: entries written before per-user keying were
-        // stored under the raw entry id.
-        if (!blob && userId) blob = await getBlob(entry.id);
-        if (blob) objUrl = URL.createObjectURL(blob);
+        const blob = await api.fetchUploadHistoryMedia(entry.id);
+        objUrl = URL.createObjectURL(blob);
       } catch (err) {
-        console.warn('TestHistory: failed to load annotated blob', err);
+        console.warn('TestHistory: failed to fetch annotated media', err);
       }
 
       set({
-        // Fall back to the stored thumbnail if the Blob is missing (e.g.
-        // entry written before IDB wiring, or IDB evicted by the browser).
+        // Fall back to the stored thumbnail if the media fetch failed.
         result: objUrl ?? entry.thumbnail,
         resultKind: entry.kind,
         metadata: entry.metadata,
@@ -456,51 +397,38 @@ export const useUploadStore = create<UploadState>()((set, get) => {
       const prev = get()._activeUserId;
       if (prev === userId) return;
 
-      // Save outgoing user's snapshot before swapping.
-      if (prev) {
-        saveSnapshot(prev, { history: get().history, engine: get().engine });
-      }
-
       // Clear ephemeral UI (in-flight file/preview/result) so one user's
-      // current test never leaks to the next. In-flight inference for the
-      // outgoing user is abandoned by design — the fetch promise will still
-      // resolve, but its setState lands into the new user's context and
-      // will be discarded by the next setUserContext if they log in later.
+      // current test never leaks to the next.
       const current = get();
       revoke(current.preview);
       revokeIfObject(current.result);
 
+      set({
+        _activeUserId: userId,
+        history: [],
+        engine: 'auto',
+        file: null,
+        preview: null,
+        kind: null,
+        result: null,
+        resultKind: null,
+        metadata: null,
+        isProcessing: false,
+        error: null,
+        lastUpdate: 0,
+      });
+
       if (userId) {
-        const snap = loadSnapshot(userId);
-        set({
-          _activeUserId: userId,
-          history: snap.history,
-          engine: snap.engine,
-          file: null,
-          preview: null,
-          kind: null,
-          result: null,
-          resultKind: null,
-          metadata: null,
-          isProcessing: false,
-          error: null,
-          lastUpdate: 0,
-        });
-      } else {
-        set({
-          _activeUserId: null,
-          history: [],
-          engine: 'auto',
-          file: null,
-          preview: null,
-          kind: null,
-          result: null,
-          resultKind: null,
-          metadata: null,
-          isProcessing: false,
-          error: null,
-          lastUpdate: 0,
-        });
+        api.listUploadHistory()
+          .then(rows => {
+            // Guard against a fast user switch: only apply if the active user
+            // is still the one we kicked the request off for.
+            if (get()._activeUserId !== userId) return;
+            set({ history: rows as HistoryEntry[] });
+          })
+          .catch(err => {
+            console.warn('TestHistory: failed to load history from server', err);
+          });
       }
     },
   };

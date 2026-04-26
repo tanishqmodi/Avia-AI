@@ -289,4 +289,37 @@ export const api = {
     if (!res.ok) throw new Error('Airport search failed');
     return res.json();
   },
+
+  // TestHistory: server-side upload run history (replaces localStorage/IDB so
+  // the same user sees the same runs across browsers).
+  listUploadHistory: async (): Promise<any[]> => {
+    const res = await fetchWithAuth(`${API_BASE}/uploads/history`);
+    if (!res.ok) throw new Error('Failed to load upload history');
+    return res.json();
+  },
+
+  saveUploadHistory: async (form: FormData): Promise<any> => {
+    const res = await fetchWithAuth(`${API_BASE}/uploads/history`, {
+      method: 'POST',
+      body: form,
+    });
+    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || 'Failed to save history');
+    return res.json();
+  },
+
+  fetchUploadHistoryMedia: async (id: string): Promise<Blob> => {
+    const res = await fetchWithAuth(`${API_BASE}/uploads/history/${id}/media`);
+    if (!res.ok) throw new Error('Failed to load media');
+    return res.blob();
+  },
+
+  deleteUploadHistory: async (id: string) => {
+    const res = await fetchWithAuth(`${API_BASE}/uploads/history/${id}`, { method: 'DELETE' });
+    if (!res.ok && res.status !== 204) throw new Error('Failed to delete entry');
+  },
+
+  clearUploadHistory: async () => {
+    const res = await fetchWithAuth(`${API_BASE}/uploads/history`, { method: 'DELETE' });
+    if (!res.ok && res.status !== 204) throw new Error('Failed to clear history');
+  },
 };

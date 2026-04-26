@@ -83,3 +83,22 @@ class DetectionLog(Base):
     model_used = Column(String)
     media_type = Column(String, default="stream") # stream, image, video
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+
+# TestHistory: server-side storage of per-user upload runs so history follows
+# the user across browsers/devices instead of living in localStorage/IndexedDB.
+# Annotated media bytes live on disk under UPLOAD_HISTORY_DIR/<user_id>/<id>.<ext>;
+# the row stores the path plus metadata + an inline base64 thumbnail.
+class UploadHistory(Base):
+    __tablename__ = "upload_history"
+    id = Column(String, primary_key=True, index=True)
+    user_id = Column(String, index=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow, index=True)
+    kind = Column(String)  # image | video
+    filename = Column(String)
+    file_size = Column(Integer)
+    engine = Column(String)  # yolo | rtdetr | auto
+    metadata_json = Column(String)
+    media_path = Column(String)
+    media_mime = Column(String)
+    thumbnail_b64 = Column(String, nullable=True)

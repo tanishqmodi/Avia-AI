@@ -1,10 +1,22 @@
 # Avia AI — Intelligent Aviation Systems
 
+> **Detect. Track. Protect the skies.**
+> Real-time bird & drone monitoring for airports — YOLOv8 / RT-DETR detection,
+> ByteTrack tracking, FastAPI backend, React/TypeScript instrument-panel dashboard.
+
+![Avia AI — Command Center](docs/screenshots/command-center.png)
+
 Bird strikes are one of the biggest safety hazards in aviation. Avia AI is a real-time
 bird-detection and monitoring system designed to run at airports. It combines modern
 object detectors (YOLOv8 and RT-DETR), per-object tracking (ByteTrack), a custom
 event-response engine (RTDTER) that reasons about airport zones, and a full web
 dashboard with authentication, user management and upload-based offline analysis.
+
+### Screenshots
+
+| Sign-in | 3D Airspace | Upload & Infer |
+| :---: | :---: | :---: |
+| ![Sign-in](docs/screenshots/login.png) | ![3D Airspace](docs/screenshots/3d-airspace.png) | ![Upload & Infer](docs/screenshots/upload-infer.png) |
 
 ---
 
